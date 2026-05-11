@@ -8,7 +8,6 @@
     <link rel="manifest" href="manifest-journal.json">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #f4f6f9;
@@ -18,118 +17,50 @@
             padding-bottom: 90px;
             user-select: none;
         }
-
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .header h1 {
-            color: #007bff;
-            margin: 0;
-            font-size: 22px;
-        }
-
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { color: #007bff; margin: 0; font-size: 22px; }
         .date-header {
-            font-weight: bold;
-            color: #007bff;
-            margin: 20px 0 10px;
-            font-size: 16px;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 5px;
+            font-weight: bold; color: #007bff; margin: 20px 0 10px;
+            font-size: 16px; border-bottom: 2px solid #eee; padding-bottom: 5px;
         }
-
         .record {
-            background: white;
-            border-radius: 16px;
-            padding: 15px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;            transition: transform 0.1s;
+            background: white; border-radius: 16px; padding: 15px; margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex;
+            justify-content: space-between; align-items: center; cursor: pointer;
+            transition: transform 0.1s;
         }
         .record:active { transform: scale(0.98); }
-
-        .record-left {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            flex: 1;
-        }
-
-        .time {
-            font-size: 13px;
-            color: #666;
-        }
-
+        .record-left { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+        .time { font-size: 13px; color: #666; }
         .bp-row {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
+            display: flex; align-items: center; gap: 15px;
+            font-size: 18px; font-weight: 600; color: #333;
         }
-
-        .pulse {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            color: #e53935;
-        }
-
+        .pulse { display: flex; align-items: center; gap: 5px; color: #e53935; }
         .pulse-icon { font-size: 20px; }
-
         .status-label {
-            display: none;
-            font-size: 13px;
-            font-weight: 500;
-            margin-top: 4px;
-            animation: fadeIn 0.2s ease;
+            display: none; font-size: 13px; font-weight: 500;
+            margin-top: 4px; animation: fadeIn 0.2s ease;
         }
         .status-label.show { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-
-        .status-bar {
-            width: 6px;
-            height: 40px;
-            border-radius: 3px;
-            margin-left: 10px;
-        }        .status-normal { background: #4caf50; }
+        .status-bar { width: 6px; height: 40px; border-radius: 3px; margin-left: 10px; }
+        .status-normal { background: #4caf50; }
         .status-moderate { background: #8bc34a; }
-        .status-elevated { background: #ffc107; }
-        .status-high { background: #f44336; }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #999;
-        }
-
+        .status-elevated { background: #ffc107; }        .status-high { background: #f44336; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
         .fab {
-            position: fixed;
-            bottom: 25px;
-            right: 25px;
-            width: 60px;
-            height: 60px;
-            background: #007bff;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 32px;
-            font-weight: 300;
-            box-shadow: 0 4px 15px rgba(0,123,255,0.4);
-            text-decoration: none;
+            position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px;
+            background: #007bff; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; color: white; font-size: 32px; font-weight: 300;
+            box-shadow: 0 4px 15px rgba(0,123,255,0.4); text-decoration: none;
         }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h1> Журнал измерений</h1>
+    <h1>📊 Журнал измерений</h1>
 </div>
 
 <div id="records-container"></div>
@@ -139,36 +70,46 @@
 <script>
 let allRecords = [];
 
-// Универсальный парсер дат: понимает старые (ДД.ММ.ГГГГ) и новые форматы
-function parseDate(dateStr) {
-    if (!dateStr) return new Date();
-    let d = new Date(dateStr);
-    if (isNaN(d.getTime())) {
-        const match = dateStr.match(/(\d{2})\.(\d{2})\.(\d{4})[,\s]*(\d{2}):(\d{2})?/);
-        if (match) {            d = new Date(match[3], match[2]-1, match[1], match[4] || 0, match[5] || 0);
-        }
+// 🔧 УНИВЕРСАЛЬНЫЙ ПАРСЕР: поймёт и "11.05.2026, 13:10", и новые форматы
+function parseRobustDate(str) {
+    if (!str) return new Date();
+    // 1. Пробуем стандартный (для новых записей)
+    let d = new Date(str);
+    if (!isNaN(d.getTime())) return d;
+
+    // 2. Ручной разбор для русского формата ДД.ММ.ГГГГ ЧЧ:ММ
+    const parts = str.split(/[.,\/:\s-]+/).filter(p => p.trim() !== '');
+    if (parts.length >= 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1; // В JS месяцы с 0
+        const year = parseInt(parts[2], 10);
+        const hour = parts[3] ? parseInt(parts[3], 10) : 0;
+        const minute = parts[4] ? parseInt(parts[4], 10) : 0;
+        
+        d = new Date(year, month, day, hour, minute);
+        if (!isNaN(d.getTime())) return d;
     }
-    return d;
+    return new Date(); // Фоллбэк
 }
 
 function formatDate(dateStr) {
-    const d = parseDate(dateStr);
+    const d = parseRobustDate(dateStr);
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-
     if (d.toDateString() === today.toDateString()) return 'Сегодня';
     if (d.toDateString() === yesterday.toDateString()) return 'Вчера';
     return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) + ' г.';
 }
 
 function getTimeFromStr(dateStr) {
-    const d = parseDate(dateStr);
+    const d = parseRobustDate(dateStr);
     return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 }
 
 function getDateKey(dateStr) {
-    const d = parseDate(dateStr);
+    const d = parseRobustDate(dateStr);
+    // Возвращаем YYYY-MM-DD в локальном времени
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
@@ -187,14 +128,14 @@ function loadRecords() {
 
 function renderRecords() {
     const container = document.getElementById('records-container');
-    
     if (allRecords.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <div style="font-size: 60px; margin-bottom: 20px; opacity: 0.3;">📋</div>
                 <div style="font-size: 18px; margin-bottom: 10px;">Нет записей</div>
                 <div style="font-size: 14px;">Нажмите + чтобы добавить измерение</div>
-            </div>        `;
+            </div>
+        `;
         return;
     }
 
@@ -204,7 +145,6 @@ function renderRecords() {
         if (!grouped[key]) grouped[key] = [];
         grouped[key].push(record);
     });
-
     let html = '';
     Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(dateKey => {
         const first = grouped[dateKey][0];
@@ -215,7 +155,7 @@ function renderRecords() {
             const time = getTimeFromStr(record.date);
 
             html += `
-                <div class="record" onclick="toggleStatus(this)">
+                <div class="record" onclick="this.querySelector('.status-label').classList.toggle('show')">
                     <div class="record-left">
                         <div class="time">${time}</div>
                         <div class="bp-row">
@@ -233,15 +173,11 @@ function renderRecords() {
     container.innerHTML = html;
 }
 
-function toggleStatus(card) {
-    const label = card.querySelector('.status-label');
-    label.classList.toggle('show');
-}
-
 loadRecords();
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden) loadRecords();
 });
 </script>
+
 </body>
 </html>
