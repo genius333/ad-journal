@@ -7,28 +7,27 @@
     <meta name="theme-color" content="#007bff">
     <link rel="manifest" href="manifest-journal.json">
     <style>
-        /* Общие стили как в Калькуляторе */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f4f6f9; /* Светло-серый фон */
+            background-color: #f4f6f9;
             color: #333;
             margin: 0;
             padding: 15px;
-            padding-bottom: 90px; /* Место для кнопки */
+            padding-bottom: 90px;
         }
 
-        /* Шапка как в калькуляторе */
         .header {
             text-align: center;
             margin-bottom: 20px;
         }
         .header h1 {
-            color: #007bff; /* Синий текст */
+            color: #007bff;
             margin: 0;
             font-size: 22px;
         }
 
-        /* Заголовки дат (как заголовки замеров) */
         .date-header {
             font-weight: bold;
             color: #007bff;
@@ -38,7 +37,6 @@
             padding-bottom: 5px;
         }
 
-        /* Карточка записи (как карточка замера) */
         .record {
             background: white;
             border-radius: 16px;
@@ -47,8 +45,8 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             display: flex;
             justify-content: space-between;
-            align-items: center;        }
-
+            align-items: center;
+        }
         .record-left {
             display: flex;
             flex-direction: column;
@@ -80,7 +78,6 @@
             font-size: 20px;
         }
 
-        /* Полоска статуса */
         .status-bar {
             width: 6px;
             height: 40px;
@@ -88,24 +85,23 @@
             margin-left: 10px;
         }
 
-        .status-normal { background: #4caf50; } /* Зеленый */
-        .status-elevated { background: #ffc107; } /* Желтый */
-        .status-high1 { background: #ff9800; } /* Оранжевый */
-        .status-high2 { background: #f44336; } /* Красный */
+        .status-normal { background: #4caf50; }
+        .status-elevated { background: #ffc107; }
+        .status-high1 { background: #ff9800; }
+        .status-high2 { background: #f44336; }
 
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: #999;        }
+            color: #999;
+        }
 
-        /* Синяя кнопка */
-        .fab {
-            position: fixed;
+        .fab {            position: fixed;
             bottom: 25px;
             right: 25px;
             width: 60px;
             height: 60px;
-            background: #007bff; /* СИНЯЯ КНОПКА */
+            background: #007bff;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -120,14 +116,12 @@
 </head>
 <body>
 
-<!-- Шапка в стиле калькулятора -->
 <div class="header">
     <h1>📊 Журнал измерений</h1>
 </div>
 
 <div id="records-container"></div>
 
-<!-- Синяя кнопка ведет в Калькулятор -->
 <a href="https://genius333.github.io/ad-calculator/" class="fab">+</a>
 
 <script>
@@ -145,22 +139,39 @@ function getStatusClass(systolic, diastolic) {
     if (systolic >= 120 && diastolic < 80) return 'status-elevated';
     return 'status-normal';
 }
+
 function formatDate(dateStr) {
     const date = new Date(dateStr);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Проверка на ISO формат (новый)
+    if (dateStr.includes('T')) {
+        const today = new Date();        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
 
-    if (date.toDateString() === today.toDateString()) {
-        return 'Сегодня';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-        return 'Вчера';
+        if (date.toDateString() === today.toDateString()) {
+            return 'Сегодня';
+        } else if (date.toDateString() === yesterday.toDateString()) {
+            return 'Вчера';
+        } else {
+            return date.toLocaleDateString('ru-RU', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+            }) + ' г.';
+        }
     } else {
-        return date.toLocaleDateString('ru-RU', { 
-            day: 'numeric', 
-            month: 'long', 
-            year: 'numeric' 
-        }) + ' г.';
+        // Для старых записей (русский формат)
+        return dateStr;
+    }
+}
+
+function getTimeFromISO(dateStr) {
+    if (dateStr.includes('T')) {
+        const date = new Date(dateStr);
+        return date.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+    } else {
+        const parts = dateStr.split(',');
+        return parts[1]?.trim() || '';
     }
 }
 
@@ -180,21 +191,18 @@ function renderRecords() {
 
     const grouped = {};
     allRecords.forEach(record => {
-        const dateKey = record.date.split(',')[0];
+        const dateKey = record.date.split('T')[0]; // Для ISO формата
         if (!grouped[dateKey]) grouped[dateKey] = [];
         grouped[dateKey].push(record);
     });
-
     let html = '';
-    Object.keys(grouped).sort((a, b) => {
-        const dateA = new Date(a);
-        const dateB = new Date(b);
-        return dateB - dateA;
-    }).forEach(dateKey => {
-        html += `<div class="date-header">${formatDate(grouped[dateKey][0].date)}</div>`;
+    Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(dateKey => {
+        const firstRecord = grouped[dateKey][0];
+        html += `<div class="date-header">${formatDate(firstRecord.date)}</div>`;
         
         grouped[dateKey].forEach(record => {
-            const statusClass = getStatusClass(record.systolic, record.diastolic);            const time = record.date.split(',')[1]?.trim() || '';
+            const statusClass = getStatusClass(record.systolic, record.diastolic);
+            const time = getTimeFromISO(record.date);
             
             html += `
                 <div class="record">
