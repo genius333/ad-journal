@@ -16,6 +16,7 @@
             margin: 0;
             padding: 15px;
             padding-bottom: 90px;
+            user-select: none; /* Чтобы текст не выделялся при тапах */
         }
 
         .header {
@@ -46,11 +47,15 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: pointer; /* Показываем, что можно нажать */            transition: transform 0.1s;
         }
+        .record:active { transform: scale(0.98); }
+
         .record-left {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 2px;
+            flex: 1;
         }
 
         .time {
@@ -74,21 +79,29 @@
             color: #e53935;
         }
 
-        .pulse-icon {
-            font-size: 20px;
-        }
+        .pulse-icon { font-size: 20px; }
 
+        /* Скрытый статус */
+        .status-label {
+            display: none;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 4px;
+            animation: fadeIn 0.2s ease;
+        }
+        .status-label.show { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Полоски */
         .status-bar {
             width: 6px;
             height: 40px;
-            border-radius: 3px;
-            margin-left: 10px;
+            border-radius: 3px;            margin-left: 10px;
         }
-
-        .status-normal { background: #4caf50; }
-        .status-elevated { background: #ffc107; }
-        .status-high1 { background: #ff9800; }
-        .status-high2 { background: #f44336; }
+        .status-normal { background: #4caf50; }      /* Зелёный */
+        .status-moderate { background: #8bc34a; }    /* Салатовый */
+        .status-elevated { background: #ffc107; }    /* Жёлтый */
+        .status-high { background: #f44336; }        /* Красный */
 
         .empty-state {
             text-align: center;
@@ -96,7 +109,8 @@
             color: #999;
         }
 
-        .fab {            position: fixed;
+        .fab {
+            position: fixed;
             bottom: 25px;
             right: 25px;
             width: 60px;
@@ -127,52 +141,47 @@
 <script>
 let allRecords = [];
 
+function toLocalDateTimeStr(date) {
+    const d = new Date(date);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${day} ${h}:${min}`;
+}
+
+function getStatusInfo(s, d) {
+    if (s >= 160 || d >= 100) return { class: 'status-high', text: '⚠️ Гипертензия', color: '#f44336' };
+    if (s >= 140 || d >= 90) return { class: 'status-elevated', text: '📈 Повышенное', color: '#ffc107' };
+    if (s >= 120 || d >= 80) return { class: 'status-moderate', text: '⚡ Умеренно повышенное', color: '#8bc34a' };
+    return { class: 'status-normal', text: '✅ Норма', color: '#4caf50' };
+}
+
+function formatDate(dateStr) {
+    const [datePart] = dateStr.split(' ');
+    const [y, m, d] = datePart.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) return 'Сегодня';
+    if (date.toDateString() === yesterday.toDateString()) return 'Вчера';
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) + ' г.';
+}
+
+function getTimeFromStr(dateStr) {
+    return dateStr.split(' ')[1] || '';
+}
+
+function getDateKey(dateStr) {
+    return dateStr.split(' ')[0];
+}
+
 function loadRecords() {
     const data = localStorage.getItem('ad_history');
     allRecords = data ? JSON.parse(data) : [];
     renderRecords();
-}
-
-function getStatusClass(systolic, diastolic) {
-    if (systolic >= 140 || diastolic >= 90) return 'status-high2';
-    if (systolic >= 130 || diastolic >= 80) return 'status-high1';
-    if (systolic >= 120 && diastolic < 80) return 'status-elevated';
-    return 'status-normal';
-}
-
-function formatDate(dateStr) {
-    const date = new Date(dateStr);
-    
-    // Проверка на ISO формат (новый)
-    if (dateStr.includes('T')) {
-        const today = new Date();        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        if (date.toDateString() === today.toDateString()) {
-            return 'Сегодня';
-        } else if (date.toDateString() === yesterday.toDateString()) {
-            return 'Вчера';
-        } else {
-            return date.toLocaleDateString('ru-RU', { 
-                day: 'numeric', 
-                month: 'long', 
-                year: 'numeric' 
-            }) + ' г.';
-        }
-    } else {
-        // Для старых записей (русский формат)
-        return dateStr;
-    }
-}
-
-function getTimeFromISO(dateStr) {
-    if (dateStr.includes('T')) {
-        const date = new Date(dateStr);
-        return date.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
-    } else {
-        const parts = dateStr.split(',');
-        return parts[1]?.trim() || '';
-    }
 }
 
 function renderRecords() {
@@ -185,38 +194,36 @@ function renderRecords() {
                 <div style="font-size: 18px; margin-bottom: 10px;">Нет записей</div>
                 <div style="font-size: 14px;">Нажмите + чтобы добавить измерение</div>
             </div>
-        `;
-        return;
+        `;        return;
     }
 
     const grouped = {};
     allRecords.forEach(record => {
-        const dateKey = record.date.split('T')[0]; // Для ISO формата
-        if (!grouped[dateKey]) grouped[dateKey] = [];
-        grouped[dateKey].push(record);
+        const key = getDateKey(record.date);
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(record);
     });
+
     let html = '';
     Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(dateKey => {
-        const firstRecord = grouped[dateKey][0];
-        html += `<div class="date-header">${formatDate(firstRecord.date)}</div>`;
+        const first = grouped[dateKey][0];
+        html += `<div class="date-header">${formatDate(first.date)}</div>`;
         
         grouped[dateKey].forEach(record => {
-            const statusClass = getStatusClass(record.systolic, record.diastolic);
-            const time = getTimeFromISO(record.date);
+            const status = getStatusInfo(record.systolic, record.diastolic);
+            const time = getTimeFromStr(record.date);
             
             html += `
-                <div class="record">
+                <div class="record" onclick="toggleStatus(this)">
                     <div class="record-left">
                         <div class="time">${time}</div>
                         <div class="bp-row">
                             <span>${record.systolic}/${record.diastolic}</span>
-                            <span class="pulse">
-                                <span class="pulse-icon">❤️</span>
-                                <span>${record.pulse}</span>
-                            </span>
+                            <span class="pulse"><span class="pulse-icon">❤️</span><span>${record.pulse}</span></span>
                         </div>
+                        <div class="status-label" style="color:${status.color}">${status.text}</div>
                     </div>
-                    <div class="status-bar ${statusClass}"></div>
+                    <div class="status-bar ${status.class}"></div>
                 </div>
             `;
         });
@@ -225,8 +232,12 @@ function renderRecords() {
     container.innerHTML = html;
 }
 
-loadRecords();
+function toggleStatus(card) {
+    const label = card.querySelector('.status-label');
+    label.classList.toggle('show');
+}
 
+loadRecords();
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden) loadRecords();
 });
