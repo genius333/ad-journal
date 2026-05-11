@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ad-journal-v1';
+const CACHE_NAME = 'ad-journal-v2';
 const ASSETS = [
   './',
   './index.html',
