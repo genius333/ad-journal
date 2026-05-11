@@ -70,36 +70,46 @@
 <script>
 let allRecords = [];
 
-// 🔧 УНИВЕРСАЛЬНЫЙ ПАРСЕР: поймёт и "11.05.2026, 13:10", и новые форматы
+// 🔧 ЖЕЛЕЗОБЕТОННЫЙ ПАРСЕР
+// Принудительно читает формат ДД.ММ.ГГГГ
 function parseRobustDate(str) {
     if (!str) return new Date();
-    // 1. Пробуем стандартный (для новых записей)
-    let d = new Date(str);
-    if (!isNaN(d.getTime())) return d;
-
-    // 2. Ручной разбор для русского формата ДД.ММ.ГГГГ ЧЧ:ММ
-    const parts = str.split(/[.,\/:\s-]+/).filter(p => p.trim() !== '');
-    if (parts.length >= 3) {
-        const day = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1; // В JS месяцы с 0
-        const year = parseInt(parts[2], 10);
-        const hour = parts[3] ? parseInt(parts[3], 10) : 0;
-        const minute = parts[4] ? parseInt(parts[4], 10) : 0;
-        
-        d = new Date(year, month, day, hour, minute);
-        if (!isNaN(d.getTime())) return d;
+    
+    // 1. Если строка содержит точку (старый формат ДД.ММ.ГГГГ)
+    if (str.includes('.')) {
+        const parts = str.split('.'); 
+        // parts[0] = День (11), parts[1] = Месяц (05), parts[2] = Год (2026)
+        if (parts.length >= 3) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1; // В JS месяцы с 0
+            const year = parseInt(parts[2], 10);
+            return new Date(year, month, day);
+        }
     }
-    return new Date(); // Фоллбэк
+
+    // 2. Если новый формат (с дефисом YYYY-MM-DD)
+    if (str.includes('-')) {
+        return new Date(str);
+    }
+
+    return new Date();
 }
 
 function formatDate(dateStr) {
-    const d = parseRobustDate(dateStr);
-    const today = new Date();
+    const d = parseRobustDate(dateStr);    const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
+
+    // Проверка на "Сегодня" и "Вчера"
     if (d.toDateString() === today.toDateString()) return 'Сегодня';
     if (d.toDateString() === yesterday.toDateString()) return 'Вчера';
-    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) + ' г.';
+    
+    // Красивая дата без дублирования "г."
+    return d.toLocaleDateString('ru-RU', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+    }); 
 }
 
 function getTimeFromStr(dateStr) {
@@ -109,7 +119,7 @@ function getTimeFromStr(dateStr) {
 
 function getDateKey(dateStr) {
     const d = parseRobustDate(dateStr);
-    // Возвращаем YYYY-MM-DD в локальном времени
+    // Возвращаем YYYY-MM-DD для группировки
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
@@ -135,8 +145,7 @@ function renderRecords() {
                 <div style="font-size: 18px; margin-bottom: 10px;">Нет записей</div>
                 <div style="font-size: 14px;">Нажмите + чтобы добавить измерение</div>
             </div>
-        `;
-        return;
+        `;        return;
     }
 
     const grouped = {};
@@ -145,7 +154,9 @@ function renderRecords() {
         if (!grouped[key]) grouped[key] = [];
         grouped[key].push(record);
     });
+
     let html = '';
+    // Сортировка дат от новых к старым
     Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(dateKey => {
         const first = grouped[dateKey][0];
         html += `<div class="date-header">${formatDate(first.date)}</div>`;
