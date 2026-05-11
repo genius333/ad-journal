@@ -7,55 +7,52 @@
     <meta name="theme-color" content="#007bff">
     <link rel="manifest" href="manifest-journal.json">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+        /* Общие стили как в Калькуляторе */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #f4f6f9;
-            padding-bottom: 90px;
+            background-color: #f4f6f9; /* Светло-серый фон */
+            color: #333;
+            margin: 0;
+            padding: 15px;
+            padding-bottom: 90px; /* Место для кнопки */
         }
 
+        /* Шапка как в калькуляторе */
         .header {
-            background: #007bff;
-            color: white;
-            padding: 20px;
             text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+            margin-bottom: 20px;
         }
-
         .header h1 {
+            color: #007bff; /* Синий текст */
+            margin: 0;
             font-size: 22px;
-            font-weight: 600;
         }
 
+        /* Заголовки дат (как заголовки замеров) */
         .date-header {
-            background: #007bff;
-            color: white;
-            padding: 10px 15px;
-            font-size: 14px;
-            font-weight: 500;
-            margin: 15px 10px 5px;
-            border-radius: 8px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 20px 0 10px;
+            font-size: 16px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
         }
 
+        /* Карточка записи (как карточка замера) */
         .record {
             background: white;
-            margin: 5px 10px;
+            border-radius: 16px;
             padding: 15px;
-            border-radius: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             display: flex;
-            justify-content: space-between;            align-items: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-        }
+            justify-content: space-between;
+            align-items: center;        }
 
         .record-left {
             display: flex;
             flex-direction: column;
-            gap: 5px;
-            flex: 1;
+            gap: 4px;
         }
 
         .time {
@@ -83,36 +80,32 @@
             font-size: 20px;
         }
 
+        /* Полоска статуса */
         .status-bar {
             width: 6px;
-            height: 45px;
+            height: 40px;
             border-radius: 3px;
             margin-left: 10px;
         }
 
-        .status-normal { background: #4caf50; }
-        .status-elevated { background: #ffc107; }
-        .status-high1 { background: #ff9800; }
-        .status-high2 { background: #f44336; }
+        .status-normal { background: #4caf50; } /* Зеленый */
+        .status-elevated { background: #ffc107; } /* Желтый */
+        .status-high1 { background: #ff9800; } /* Оранжевый */
+        .status-high2 { background: #f44336; } /* Красный */
 
         .empty-state {
-            text-align: center;            padding: 80px 20px;
-            color: #999;
-        }
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;        }
 
-        .empty-state-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-            opacity: 0.3;
-        }
-
+        /* Синяя кнопка */
         .fab {
             position: fixed;
             bottom: 25px;
             right: 25px;
             width: 60px;
             height: 60px;
-            background: #f44336;
+            background: #007bff; /* СИНЯЯ КНОПКА */
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -120,23 +113,21 @@
             color: white;
             font-size: 32px;
             font-weight: 300;
-            box-shadow: 0 4px 15px rgba(244,67,54,0.4);
+            box-shadow: 0 4px 15px rgba(0,123,255,0.4);
             text-decoration: none;
-        }
-
-        .fab:active {
-            transform: scale(0.95);
         }
     </style>
 </head>
 <body>
 
+<!-- Шапка в стиле калькулятора -->
 <div class="header">
     <h1>📊 Журнал измерений</h1>
 </div>
 
 <div id="records-container"></div>
 
+<!-- Синяя кнопка ведет в Калькулятор -->
 <a href="https://genius333.github.io/ad-calculator/" class="fab">+</a>
 
 <script>
@@ -145,7 +136,8 @@ let allRecords = [];
 function loadRecords() {
     const data = localStorage.getItem('ad_history');
     allRecords = data ? JSON.parse(data) : [];
-    renderRecords();}
+    renderRecords();
+}
 
 function getStatusClass(systolic, diastolic) {
     if (systolic >= 140 || diastolic >= 90) return 'status-high2';
@@ -153,7 +145,6 @@ function getStatusClass(systolic, diastolic) {
     if (systolic >= 120 && diastolic < 80) return 'status-elevated';
     return 'status-normal';
 }
-
 function formatDate(dateStr) {
     const date = new Date(dateStr);
     const today = new Date();
@@ -179,7 +170,7 @@ function renderRecords() {
     if (allRecords.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <div class="empty-state-icon">📋</div>
+                <div style="font-size: 60px; margin-bottom: 20px; opacity: 0.3;">📋</div>
                 <div style="font-size: 18px; margin-bottom: 10px;">Нет записей</div>
                 <div style="font-size: 14px;">Нажмите + чтобы добавить измерение</div>
             </div>
@@ -187,14 +178,12 @@ function renderRecords() {
         return;
     }
 
-    // Группируем по датам
     const grouped = {};
     allRecords.forEach(record => {
         const dateKey = record.date.split(',')[0];
-        if (!grouped[dateKey]) {
-            grouped[dateKey] = [];
-        }
-        grouped[dateKey].push(record);    });
+        if (!grouped[dateKey]) grouped[dateKey] = [];
+        grouped[dateKey].push(record);
+    });
 
     let html = '';
     Object.keys(grouped).sort((a, b) => {
@@ -205,8 +194,7 @@ function renderRecords() {
         html += `<div class="date-header">${formatDate(grouped[dateKey][0].date)}</div>`;
         
         grouped[dateKey].forEach(record => {
-            const statusClass = getStatusClass(record.systolic, record.diastolic);
-            const time = record.date.split(',')[1]?.trim() || '';
+            const statusClass = getStatusClass(record.systolic, record.diastolic);            const time = record.date.split(',')[1]?.trim() || '';
             
             html += `
                 <div class="record">
@@ -229,14 +217,10 @@ function renderRecords() {
     container.innerHTML = html;
 }
 
-// Загрузка при старте
 loadRecords();
 
-// Автообновление при возврате
 document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-        loadRecords();
-    }
+    if (!document.hidden) loadRecords();
 });
 </script>
 
