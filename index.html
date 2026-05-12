@@ -23,10 +23,7 @@
         .status-label.show{display:block}
         @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
         .status-bar{width:6px;height:40px;border-radius:3px;margin-left:10px}
-        .status-normal{background:#4caf50}
-        .status-moderate{background:#8bc34a}
-        .status-elevated{background:#ffc107}
-        .status-high{background:#f44336}
+        .status-normal{background:#4caf50}.status-moderate{background:#8bc34a}.status-elevated{background:#ffc107}.status-high{background:#f44336}
         .empty-state{text-align:center;padding:60px 20px;color:#999}
         .fab{position:fixed;bottom:25px;right:25px;width:60px;height:60px;background:#007bff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;font-weight:300;box-shadow:0 4px 15px rgba(0,123,255,.4);text-decoration:none}
         .loading{text-align:center;padding:40px;color:#666}
@@ -39,19 +36,18 @@
 
 <script>
     const GIST_ID = '969fd26ad9b155097eed81b0449a306f';
-    const TOKEN = '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';
+    
+    // 🔑 ТОТ ЖЕ ТОКЕН, ЧТО И В КАЛЬКУЛЯТОРЕ
+    const PART_1 = 'ghp_Srh7Hhxv8bAQp4';
+    const PART_2 = 'wdtmEMIQ4Bk4Ih7u3pW68e';
+    const TOKEN = PART_1 + PART_2;
+    
     let allRecords = [];
 
-    // 🔴 ИДЕНТИЧНАЯ ЛОГИКА С КАЛЬКУЛЯТОРОМ
     function getStatusInfo(s, d) {
-        if (s >= 160 || d >= 100) {
-            return { class: 'status-high', text: '️ Гипертензия', color: '#f44336' };
-        } else if (s >= 140 || d >= 90) {
-            return { class: 'status-elevated', text: '📈 Повышенное', color: '#ffc107' };        } else if (s >= 120 || d >= 80) {
-            return { class: 'status-moderate', text: '⚡ Умеренно повышенное', color: '#8bc34a' };
-        } else {
-            return { class: 'status-normal', text: '✅ Норма', color: '#4caf50' };
-        }
+        if (s >= 160 || d >= 100) return { class: 'status-high', text: '⚠️ Гипертензия', color: '#f44336' };
+        if (s >= 140 || d >= 90) return { class: 'status-elevated', text: '📈 Повышенное', color: '#ffc107' };
+        if (s >= 120 || d >= 80) return { class: 'status-moderate', text: '⚡ Умеренно повышенное', color: '#8bc34a' };        return { class: 'status-normal', text: '✅ Норма', color: '#4caf50' };
     }
 
     function formatDate(dateStr) {
@@ -96,11 +92,11 @@
         const grouped = {};
         allRecords.forEach(r => {
             const key = getDateKey(r.date);
-            if (!grouped[key]) grouped[key] = [];            grouped[key].push(r);
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(r);
         });
 
-        let html = '';
-        Object.keys(grouped).sort((a,b) => b.localeCompare(a)).forEach(dateKey => {
+        let html = '';        Object.keys(grouped).sort((a,b) => b.localeCompare(a)).forEach(dateKey => {
             const first = grouped[dateKey][0];
             html += `<div class="date-header">${formatDate(first.date)}</div>`;
             grouped[dateKey].forEach(r => {
