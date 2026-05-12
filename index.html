@@ -7,188 +7,121 @@
     <meta name="theme-color" content="#007bff">
     <link rel="manifest" href="manifest-journal.json">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f4f6f9;
-            color: #333;
-            margin: 0;
-            padding: 15px;
-            padding-bottom: 90px;
-            user-select: none;
-        }
-        .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { color: #007bff; margin: 0; font-size: 22px; }
-        .date-header {
-            font-weight: bold; color: #007bff; margin: 20px 0 10px;
-            font-size: 16px; border-bottom: 2px solid #eee; padding-bottom: 5px;
-        }
-        .record {
-            background: white; border-radius: 16px; padding: 15px; margin-bottom: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex;
-            justify-content: space-between; align-items: center; cursor: pointer;
-            transition: transform 0.1s;
-        }
-        .record:active { transform: scale(0.98); }
-        .record-left { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-        .time { font-size: 13px; color: #666; }
-        .bp-row {
-            display: flex; align-items: center; gap: 15px;
-            font-size: 18px; font-weight: 600; color: #333;
-        }
-        .pulse { display: flex; align-items: center; gap: 5px; color: #e53935; }
-        .pulse-icon { font-size: 20px; }
-        .status-label {
-            display: none; font-size: 13px; font-weight: 500;
-            margin-top: 4px; animation: fadeIn 0.2s ease;
-        }
-        .status-label.show { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-        .status-bar { width: 6px; height: 40px; border-radius: 3px; margin-left: 10px; }
-        .status-normal { background: #4caf50; }
-        .status-moderate { background: #8bc34a; }
-        .status-elevated { background: #ffc107; }        .status-high { background: #f44336; }
-        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
-        .fab {
-            position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px;
-            background: #007bff; border-radius: 50%; display: flex; align-items: center;
-            justify-content: center; color: white; font-size: 32px; font-weight: 300;
-            box-shadow: 0 4px 15px rgba(0,123,255,0.4); text-decoration: none;
-        }
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f4f6f9;color:#333;margin:0;padding:15px;padding-bottom:90px;user-select:none}
+        .header{text-align:center;margin-bottom:20px}
+        .header h1{color:#007bff;margin:0;font-size:22px}
+        .date-header{font-weight:bold;color:#007bff;margin:20px 0 10px;font-size:16px;border-bottom:2px solid #eee;padding-bottom:5px}
+        .record{background:#fff;border-radius:16px;padding:15px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,.05);display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:transform .1s}
+        .record:active{transform:scale(.98)}
+        .record-left{display:flex;flex-direction:column;gap:2px;flex:1}
+        .time{font-size:13px;color:#666}
+        .bp-row{display:flex;align-items:center;gap:15px;font-size:18px;font-weight:600;color:#333}
+        .pulse{display:flex;align-items:center;gap:5px;color:#e53935}
+        .pulse-icon{font-size:20px}
+        .status-label{display:none;font-size:13px;font-weight:500;margin-top:4px;animation:fadeIn .2s ease}
+        .status-label.show{display:block}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+        .status-bar{width:6px;height:40px;border-radius:3px;margin-left:10px}
+        .status-normal{background:#4caf50}
+        .status-moderate{background:#8bc34a}
+        .status-elevated{background:#ffc107}
+        .status-high{background:#f44336}
+        .empty-state{text-align:center;padding:60px 20px;color:#999}
+        .fab{position:fixed;bottom:25px;right:25px;width:60px;height:60px;background:#007bff;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;font-weight:300;box-shadow:0 4px 15px rgba(0,123,255,.4);text-decoration:none}
+        .loading{text-align:center;padding:40px;color:#666}
     </style>
 </head>
 <body>
-
-<div class="header">
-    <h1>📊 Журнал измерений</h1>
-</div>
-
-<div id="records-container"></div>
-
+<div class="header"><h1>📊 Журнал измерений</h1></div>
+<div id="records-container"><div class="loading">⏳ Загрузка из облака...</div></div>
 <a href="https://genius333.github.io/ad-calculator/" class="fab">+</a>
 
 <script>
-let allRecords = [];
+    const GIST_ID = '969fd26ad9b155097eed81b0449a306f';
+    const TOKEN = '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';
+    let allRecords = [];
 
-// 🔧 ЖЕЛЕЗОБЕТОННЫЙ ПАРСЕР
-// Принудительно читает формат ДД.ММ.ГГГГ
-function parseRobustDate(str) {
-    if (!str) return new Date();
-    
-    // 1. Если строка содержит точку (старый формат ДД.ММ.ГГГГ)
-    if (str.includes('.')) {
-        const parts = str.split('.'); 
-        // parts[0] = День (11), parts[1] = Месяц (05), parts[2] = Год (2026)
-        if (parts.length >= 3) {
-            const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1; // В JS месяцы с 0
-            const year = parseInt(parts[2], 10);
-            return new Date(year, month, day);
+    // 🔴 ИДЕНТИЧНАЯ ЛОГИКА С КАЛЬКУЛЯТОРОМ
+    function getStatusInfo(s, d) {
+        if (s >= 160 || d >= 100) {
+            return { class: 'status-high', text: '️ Гипертензия', color: '#f44336' };
+        } else if (s >= 140 || d >= 90) {
+            return { class: 'status-elevated', text: '📈 Повышенное', color: '#ffc107' };        } else if (s >= 120 || d >= 80) {
+            return { class: 'status-moderate', text: '⚡ Умеренно повышенное', color: '#8bc34a' };
+        } else {
+            return { class: 'status-normal', text: '✅ Норма', color: '#4caf50' };
         }
     }
 
-    // 2. Если новый формат (с дефисом YYYY-MM-DD)
-    if (str.includes('-')) {
-        return new Date(str);
+    function formatDate(dateStr) {
+        const parts = dateStr.split(' ');
+        const d = new Date(parts[0]);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (d.toDateString() === today.toDateString()) return 'Сегодня';
+        if (d.toDateString() === yesterday.toDateString()) return 'Вчера';
+        return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
     }
 
-    return new Date();
-}
-
-function formatDate(dateStr) {
-    const d = parseRobustDate(dateStr);    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    // Проверка на "Сегодня" и "Вчера"
-    if (d.toDateString() === today.toDateString()) return 'Сегодня';
-    if (d.toDateString() === yesterday.toDateString()) return 'Вчера';
-    
-    // Красивая дата без дублирования "г."
-    return d.toLocaleDateString('ru-RU', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
-    }); 
-}
-
-function getTimeFromStr(dateStr) {
-    const d = parseRobustDate(dateStr);
-    return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-}
-
-function getDateKey(dateStr) {
-    const d = parseRobustDate(dateStr);
-    // Возвращаем YYYY-MM-DD для группировки
-    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
-
-function getStatusInfo(s, d) {
-    if (s >= 160 || d >= 100) return { class: 'status-high', text: '⚠️ Гипертензия', color: '#f44336' };
-    if (s >= 140 || d >= 90) return { class: 'status-elevated', text: '📈 Повышенное', color: '#ffc107' };
-    if (s >= 120 || d >= 80) return { class: 'status-moderate', text: '⚡ Умеренно повышенное', color: '#8bc34a' };
-    return { class: 'status-normal', text: '✅ Норма', color: '#4caf50' };
-}
-
-function loadRecords() {
-    const data = localStorage.getItem('ad_history');
-    allRecords = data ? JSON.parse(data) : [];
-    renderRecords();
-}
-
-function renderRecords() {
-    const container = document.getElementById('records-container');
-    if (allRecords.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div style="font-size: 60px; margin-bottom: 20px; opacity: 0.3;">📋</div>
-                <div style="font-size: 18px; margin-bottom: 10px;">Нет записей</div>
-                <div style="font-size: 14px;">Нажмите + чтобы добавить измерение</div>
-            </div>
-        `;        return;
+    function getDateKey(dateStr) {
+        return dateStr.split(' ')[0];
     }
 
-    const grouped = {};
-    allRecords.forEach(record => {
-        const key = getDateKey(record.date);
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(record);
-    });
+    async function loadFromCloud() {
+        try {
+            const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                headers: { 'Authorization': `Bearer ${TOKEN}` }
+            });
+            const data = await res.json();
+            if (data.files && data.files['bp_logs.json']) {
+                allRecords = JSON.parse(data.files['bp_logs.json'].content);
+                renderRecords();
+            } else {
+                document.getElementById('records-container').innerHTML = `<div class="empty-state">Нет данных в облаке</div>`;
+            }
+        } catch (e) {
+            document.getElementById('records-container').innerHTML = `<div class="empty-state">❌ Ошибка загрузки</div>`;
+        }
+    }
 
-    let html = '';
-    // Сортировка дат от новых к старым
-    Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(dateKey => {
-        const first = grouped[dateKey][0];
-        html += `<div class="date-header">${formatDate(first.date)}</div>`;
+    function renderRecords() {
+        const container = document.getElementById('records-container');
+        if (!allRecords.length) {
+            container.innerHTML = `<div class="empty-state"><div style="font-size:60px;opacity:.3;margin-bottom:20px">📋</div><div>Нет записей</div><div style="font-size:14px">Нажмите + чтобы добавить</div></div>`;
+            return;
+        }
 
-        grouped[dateKey].forEach(record => {
-            const status = getStatusInfo(record.systolic, record.diastolic);
-            const time = getTimeFromStr(record.date);
-
-            html += `
-                <div class="record" onclick="this.querySelector('.status-label').classList.toggle('show')">
-                    <div class="record-left">
-                        <div class="time">${time}</div>
-                        <div class="bp-row">
-                            <span>${record.systolic}/${record.diastolic}</span>
-                            <span class="pulse"><span class="pulse-icon">❤️</span><span>${record.pulse}</span></span>
-                        </div>
-                        <div class="status-label" style="color:${status.color}">${status.text}</div>
-                    </div>
-                    <div class="status-bar ${status.class}"></div>
-                </div>
-            `;
+        const grouped = {};
+        allRecords.forEach(r => {
+            const key = getDateKey(r.date);
+            if (!grouped[key]) grouped[key] = [];            grouped[key].push(r);
         });
-    });
 
-    container.innerHTML = html;
-}
+        let html = '';
+        Object.keys(grouped).sort((a,b) => b.localeCompare(a)).forEach(dateKey => {
+            const first = grouped[dateKey][0];
+            html += `<div class="date-header">${formatDate(first.date)}</div>`;
+            grouped[dateKey].forEach(r => {
+                const status = getStatusInfo(r.systolic, r.diastolic);
+                const time = r.date.split(' ')[1];
+                html += `
+                    <div class="record" onclick="this.querySelector('.status-label').classList.toggle('show')">
+                        <div class="record-left">
+                            <div class="time">${time}</div>
+                            <div class="bp-row"><span>${r.systolic}/${r.diastolic}</span><span class="pulse"><span class="pulse-icon">❤️</span><span>${r.pulse}</span></span></div>
+                            <div class="status-label" style="color:${status.color}">${status.text}</div>
+                        </div>
+                        <div class="status-bar ${status.class}"></div>
+                    </div>`;
+            });
+        });
+        container.innerHTML = html;
+    }
 
-loadRecords();
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) loadRecords();
-});
+    loadFromCloud();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) loadFromCloud(); });
 </script>
-
 </body>
 </html>
